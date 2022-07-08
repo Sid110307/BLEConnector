@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
 					requestPermissions(
 						this,
 						arrayOf(
-							(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Manifest.permission.BLUETOOTH_CONNECT),
+							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Manifest.permission.BLUETOOTH_CONNECT else Manifest.permission.BLUETOOTH,
 							Manifest.permission.ACCESS_FINE_LOCATION
 						),
 						1
