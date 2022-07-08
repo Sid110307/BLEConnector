@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools">
+	<item
+		android:id="@+id/menu_refresh"
+		android:checkable="false"
+		android:enabled="false"
+		android:orderInCategory="1"
+		android:tooltipText="Refresh"
+		app:showAsAction="ifRoom"
+		tools:ignore="MenuTitle" />
+	<item
+		android:id="@+id/menu_scan"
+		android:orderInCategory="100"
+		android:title="Scan"
+		android:tooltipText="Scan"
+		app:showAsAction="ifRoom|withText" />
+	<item
+		android:id="@+id/menu_stop"
+		android:orderInCategory="101"
+		android:title="Stop"
+		android:tooltipText="Stop"
+		app:showAsAction="ifRoom|withText" />
+	<item
+		android:id="@+id/menu_about"
+		android:orderInCategory="102"
+		android:title="About"
+		android:tooltipText="About"
+		app:showAsAction="ifRoom|withText" />
+</menu>
