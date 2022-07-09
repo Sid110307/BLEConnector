@@ -12,14 +12,4 @@
 		android:layout_height="match_parent"
 		android:padding="16dp"
 		tools:listitem="@layout/listitem_device" />
-
-	<TextView
-		android:id="@+id/empty"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:layout_centerInParent="true"
-		android:text="Discoverable devices will appear here"
-		android:textAlignment="center"
-		android:textSize="16sp"
-		android:visibility="gone" />
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

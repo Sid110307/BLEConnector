@@ -16,12 +16,12 @@ import androidx.appcompat.app.AppCompatActivity
 import java.util.*
 
 class DeviceController : AppCompatActivity() {
-	private lateinit var mConnectionState: TextView
-	private lateinit var mDataField: TextView
-	private lateinit var mDeviceName: String
-	private lateinit var mDeviceAddress: String
-	private lateinit var mGattServicesList: ExpandableListView
-	private lateinit var mNotifyCharacteristic: BluetoothGattCharacteristic
+	private var mConnectionState: TextView? = null
+	private var mDataField: TextView? = null
+	private var mDeviceName: String? = null
+	private var mDeviceAddress: String? = null
+	private var mGattServicesList: ExpandableListView? = null
+	private var mNotifyCharacteristic: BluetoothGattCharacteristic? = null
 
 	private var mBLEService: BLEService? = null
 	private var mGattCharacteristics: MutableList<ArrayList<BluetoothGattCharacteristic>>? = null
@@ -36,15 +36,16 @@ class DeviceController : AppCompatActivity() {
 		findViewById<TextView>(R.id.device_address).text = mDeviceAddress
 
 		mGattServicesList = findViewById(android.R.id.list)
-		mGattServicesList.emptyView = findViewById(android.R.id.empty)
-		mGattServicesList.setOnChildClickListener(ExpandableListView.OnChildClickListener { _, _, groupPosition, childPosition, _ ->
+		mGattServicesList!!.setOnChildClickListener(ExpandableListView.OnChildClickListener { _, _, groupPosition, childPosition, _ ->
 			if (mGattCharacteristics != null) {
 				val characteristic = mGattCharacteristics!![groupPosition][childPosition]
 				val charProp = characteristic.properties
 
 				if (charProp or BluetoothGattCharacteristic.PROPERTY_READ > 0) {
-					mBLEService!!.setCharacteristicNotification(mNotifyCharacteristic, false)
+					mBLEService!!.setCharacteristicNotification(mNotifyCharacteristic!!, false)
 					mBLEService!!.readCharacteristic(characteristic)
+
+					mNotifyCharacteristic = characteristic
 				}
 
 				if (charProp or BluetoothGattCharacteristic.PROPERTY_NOTIFY > 0) {
@@ -69,7 +70,32 @@ class DeviceController : AppCompatActivity() {
 		super.onResume()
 
 		registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter())
-		mBLEService?.connect(mDeviceAddress)
+		if (mBLEService != null) connectToDevice()
+	}
+
+	fun connectToDevice() = if (mBLEService!!.connect(mDeviceAddress)) {
+		Log.d(TAG, "Connected")
+
+		mConnected = true
+		invalidateOptionsMenu()
+		updateConnectionState("Connected")
+
+		displayData(mBLEService!!.getData())
+		displayGattServices(mBLEService!!.getSupportedGattServices())
+	} else {
+		Log.e(TAG, "Unable to connect to device")
+		finish()
+	}
+
+	private fun disconnectFromDevice() {
+		if (mBLEService != null) {
+			mBLEService!!.disconnect()
+			Log.d(TAG, "Disconnected")
+
+			mConnected = false
+			invalidateOptionsMenu()
+			updateConnectionState("Disconnected")
+		}
 	}
 
 	override fun onPause() {
@@ -102,11 +128,11 @@ class DeviceController : AppCompatActivity() {
 	override fun onOptionsItemSelected(item: MenuItem): Boolean {
 		when (item.itemId) {
 			R.id.menu_connect -> {
-				mBLEService!!.connect(mDeviceAddress)
+				connectToDevice()
 				return true
 			}
 			R.id.menu_disconnect -> {
-				mBLEService!!.disconnect()
+				disconnectFromDevice()
 				return true
 			}
 		}
@@ -129,7 +155,7 @@ class DeviceController : AppCompatActivity() {
 				finish()
 			}
 
-			mBLEService!!.connect(mDeviceAddress)
+			connectToDevice()
 		}
 
 		override fun onServiceDisconnected(componentName: ComponentName) {
@@ -152,10 +178,7 @@ class DeviceController : AppCompatActivity() {
 					invalidateOptionsMenu()
 					clearUI()
 				}
-				"ACTION_GATT_SERVICES_DISCOVERED" -> {
-					@Suppress("UNCHECKED_CAST")
-					displayGattServices(mBLEService!!.getSupportedGattServices() as List<BluetoothGattService>?)
-				}
+				"ACTION_GATT_SERVICES_DISCOVERED" -> displayGattServices(mBLEService!!.getSupportedGattServices())
 				"ACTION_DATA_AVAILABLE" -> {
 					displayData(intent.getStringExtra("EXTRA_DATA"))
 				}
@@ -164,15 +187,14 @@ class DeviceController : AppCompatActivity() {
 	}
 
 	fun clearUI() {
-		mGattServicesList.setAdapter(null as SimpleExpandableListAdapter?)
-		mDataField.text = buildString { append("No data") }
+		mGattServicesList!!.setAdapter(null as SimpleExpandableListAdapter?)
+		mDataField!!.text = buildString { append("No data") }
 	}
 
-	fun updateConnectionState(text: String) =
-		runOnUiThread { mConnectionState.text = text }
+	fun updateConnectionState(text: String) = runOnUiThread { mConnectionState!!.text = text }
 
 	fun displayData(data: String?) {
-		if (data != null) mDataField.text = data
+		if (data != null) mDataField!!.text = data
 	}
 
 	fun displayGattServices(gattServices: List<BluetoothGattService>?) {
@@ -220,7 +242,7 @@ class DeviceController : AppCompatActivity() {
 			intArrayOf(android.R.id.text1, android.R.id.text2)
 		)
 
-		mGattServicesList.setAdapter(gattServiceAdapter)
+		mGattServicesList!!.setAdapter(gattServiceAdapter)
 	}
 
 	private fun makeGattUpdateIntentFilter(): IntentFilter {

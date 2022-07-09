@@ -1,24 +1,24 @@
 package com.sid.bleconnector
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Service
 import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
 import com.sid.bleconnector.DeviceController.Companion.TAG
+import com.sid.bleconnector.MainActivity.Companion.hasPermissions
 import java.util.*
 
 class BLEService : Service() {
-	private lateinit var mBluetoothManager: BluetoothManager
-	private lateinit var mBluetoothAdapter: BluetoothAdapter
-	private lateinit var mBluetoothDeviceAddress: String
-	private lateinit var mBluetoothGatt: BluetoothGatt
+	private var mBluetoothManager: BluetoothManager? = null
+	private var mBluetoothAdapter: BluetoothAdapter? = null
+	private var mBluetoothDeviceAddress: String? = null
+	private var mBluetoothGatt: BluetoothGatt? = null
 
 	private var mConnectionState = STATE_DISCONNECTED
 
@@ -26,17 +26,19 @@ class BLEService : Service() {
 		override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
 			val intentAction: String
 
+			@Suppress("MissingPermission")
 			when (newState) {
 				BluetoothProfile.STATE_CONNECTED -> {
 					intentAction = "ACTION_GATT_CONNECTED"
 					mConnectionState = STATE_CONNECTED
 
 					broadcastUpdate(intentAction)
-					if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+					if (hasPermissions(this@BLEService, Manifest.permission.BLUETOOTH_CONNECT)) {
 						startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 						return
 					}
-					mBluetoothGatt.discoverServices()
+
+					mBluetoothGatt!!.discoverServices()
 				}
 				BluetoothProfile.STATE_DISCONNECTED -> {
 					intentAction = "ACTION_GATT_DISCONNECTED"
@@ -82,9 +84,7 @@ class BLEService : Service() {
 		val data = characteristic.value
 		if (data != null && data.isNotEmpty()) {
 			val hexString = StringBuilder(data.size * 2)
-			for (b in data) {
-				hexString.append(String.format("%02X", b))
-			}
+			for (b in data) hexString.append(String.format("%02X", b))
 			intent.putExtra("EXTRA_DATA", hexString.toString())
 		}
 
@@ -97,7 +97,6 @@ class BLEService : Service() {
 	}
 
 	override fun onBind(intent: Intent?): IBinder = mBinder
-
 	override fun onUnbind(intent: Intent?): Boolean {
 		close()
 		return super.onUnbind(intent)
@@ -119,7 +118,7 @@ class BLEService : Service() {
 
 		mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
-		if (mBluetoothManager.adapter == null) {
+		if (mBluetoothManager!!.adapter == null) {
 			Toast.makeText(
 				this,
 				"Unable to obtain a BluetoothAdapter.",
@@ -130,10 +129,11 @@ class BLEService : Service() {
 			return false
 		}
 
-		mBluetoothAdapter = mBluetoothManager.adapter
+		mBluetoothAdapter = mBluetoothManager!!.adapter
 		return true
 	}
 
+	@SuppressLint("MissingPermission")
 	fun connect(address: String?): Boolean {
 		if (address == null) {
 			Toast.makeText(
@@ -146,24 +146,23 @@ class BLEService : Service() {
 			return false
 		}
 
-		if (ActivityCompat.checkSelfPermission(
-				this,
-				Manifest.permission.BLUETOOTH_CONNECT
-			) != PackageManager.PERMISSION_GRANTED
-		) return false
+		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) return false
 
-		if (mBluetoothDeviceAddress.isNotEmpty() && address == mBluetoothDeviceAddress && mBluetoothGatt.connect()) {
+		if (mBluetoothDeviceAddress != null && address == mBluetoothDeviceAddress) {
 			Toast.makeText(
 				this,
 				"Trying to connect...",
 				Toast.LENGTH_SHORT
 			).show()
 
-			return if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+			Log.d(TAG, "Trying to connect before checking permissions...")
+
+			return if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
 				startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 				false
-			} else if (mBluetoothGatt.connect()) {
+			} else if (mBluetoothGatt != null && mBluetoothGatt!!.connect() && mBluetoothGatt!!.discoverServices()) {
 				mConnectionState = STATE_CONNECTING
+				Log.d(TAG, "Connecting to $address...")
 				true
 			} else {
 				Toast.makeText(this, "Unable to connect to GATT server.", Toast.LENGTH_LONG).show()
@@ -173,15 +172,15 @@ class BLEService : Service() {
 			}
 		}
 
-		val device = mBluetoothAdapter.getRemoteDevice(address)
+		val device = mBluetoothAdapter!!.getRemoteDevice(address)
 		if (device == null) {
 			Toast.makeText(
 				this,
-				"Device not found.  Unable to connect.",
+				"Device not found. Unable to connect.",
 				Toast.LENGTH_SHORT
 			).show()
 
-			Log.e(TAG, "Device not found.  Unable to connect.")
+			Log.e(TAG, "Device not found. Unable to connect.")
 			return false
 		}
 
@@ -192,13 +191,16 @@ class BLEService : Service() {
 			Toast.LENGTH_SHORT
 		).show()
 
+		Log.e(TAG, "Trying to connect after GATT connection...")
+
 		mBluetoothDeviceAddress = address
 		mConnectionState = STATE_CONNECTING
 		return true
 	}
 
+	@SuppressLint("MissingPermission")
 	fun disconnect() {
-		if (mBluetoothManager.adapter == null || !mBluetoothManager.adapter.isEnabled) {
+		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
 				this,
 				"Bluetooth Adapter is not initialized",
@@ -209,16 +211,17 @@ class BLEService : Service() {
 			return
 		}
 
-		if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
 
-		mBluetoothGatt.disconnect()
+		mBluetoothGatt!!.disconnect()
 	}
 
+	@SuppressLint("MissingPermission")
 	fun close() {
-		if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
 			val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
 			intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
 			startActivity(intent)
@@ -226,11 +229,12 @@ class BLEService : Service() {
 			return
 		}
 
-		mBluetoothGatt.close()
+		mBluetoothGatt!!.close()
 	}
 
+	@SuppressLint("MissingPermission")
 	fun readCharacteristic(characteristic: BluetoothGattCharacteristic?) {
-		if (mBluetoothManager.adapter == null || !mBluetoothManager.adapter.isEnabled) {
+		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
 				this,
 				"Bluetooth Adapter is not initialized",
@@ -241,19 +245,20 @@ class BLEService : Service() {
 			return
 		}
 
-		if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
 
-		mBluetoothGatt.readCharacteristic(characteristic)
+		mBluetoothGatt!!.readCharacteristic(characteristic)
 	}
 
+	@SuppressLint("MissingPermission")
 	fun setCharacteristicNotification(
 		characteristic: BluetoothGattCharacteristic,
 		enabled: Boolean
 	) {
-		if (mBluetoothManager.adapter == null || !mBluetoothManager.adapter.isEnabled) {
+		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
 				this,
 				"Bluetooth Adapter is not initialized",
@@ -264,19 +269,20 @@ class BLEService : Service() {
 			return
 		}
 
-		if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
 
-		mBluetoothGatt.setCharacteristicNotification(characteristic, enabled)
+		mBluetoothGatt!!.setCharacteristicNotification(characteristic, enabled)
 
 		val descriptor = characteristic.getDescriptor(BT_UUID)
 		descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-		mBluetoothGatt.writeDescriptor(descriptor)
+		mBluetoothGatt!!.writeDescriptor(descriptor)
 	}
 
-	fun getSupportedGattServices(): List<BluetoothGattService?>? = mBluetoothGatt.services
+	fun getSupportedGattServices(): List<BluetoothGattService>? = mBluetoothGatt!!.services
+	fun getData(): String? = Intent().getStringExtra("EXTRA_DATA")
 
 	companion object {
 		private const val STATE_DISCONNECTED = 0

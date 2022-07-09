@@ -65,9 +65,14 @@
 			android:textSize="18sp" />
 	</LinearLayout>
 
-	<ExpandableListView
-		android:id="@android:id/list"
+	<RelativeLayout
 		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		tools:listitem="@layout/listitem_device" />
+		android:layout_height="wrap_content">
+
+		<ExpandableListView
+			android:id="@android:id/list"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			tools:listitem="@layout/listitem_device" />
+	</RelativeLayout>
 </LinearLayout>
