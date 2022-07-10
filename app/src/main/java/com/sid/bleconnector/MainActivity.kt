@@ -25,8 +25,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat.checkSelfPermission
 import androidx.core.app.ActivityCompat.requestPermissions
+import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.sid.bleconnector.DeviceController.Companion.TAG
@@ -93,19 +93,19 @@ class MainActivity : AppCompatActivity() {
 		bluetoothAdapter = (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
 		if (!bluetoothAdapter!!.isEnabled) showPermissionDialog()
 
-		findViewById<SwipeRefreshLayout>(R.id.main_layout).also {
-			it.setColorSchemeResources(
+		findViewById<SwipeRefreshLayout>(R.id.main_layout).apply {
+			setColorSchemeResources(
 				R.color.teal_200,
 				R.color.teal_700,
 				R.color.purple_200,
 				R.color.purple_500,
 				R.color.purple_700
 			)
-			it.setOnRefreshListener {
+			setOnRefreshListener {
 				scanLeDevice(!mScanning)
-				it.isRefreshing = false
+				isRefreshing = false
 			}
-			it.isRefreshing = mScanning
+			isRefreshing = mScanning
 		}
 
 		@Suppress("MissingPermission")
@@ -297,10 +297,7 @@ class MainActivity : AppCompatActivity() {
 
 		fun hasPermissions(context: Context, vararg permissions: String): Boolean =
 			permissions.all {
-				return (checkSelfPermission(
-					context,
-					it
-				) != PackageManager.PERMISSION_GRANTED)
+				return (checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED)
 			}
 	}
 }

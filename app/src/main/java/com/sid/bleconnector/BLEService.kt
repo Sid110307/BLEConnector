@@ -3,7 +3,14 @@ package com.sid.bleconnector
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Service
-import android.bluetooth.*
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
@@ -14,7 +21,13 @@ import com.sid.bleconnector.DeviceController.Companion.TAG
 import com.sid.bleconnector.MainActivity.Companion.hasPermissions
 import java.util.*
 
-class BLEService : Service() {
+class BLEService() : Service() {
+	private var context: Context? = null
+
+	constructor(ctx: Context) : this() {
+		context = ctx
+	}
+
 	private var mBluetoothManager: BluetoothManager? = null
 	private var mBluetoothAdapter: BluetoothAdapter? = null
 	private var mBluetoothDeviceAddress: String? = null
@@ -33,7 +46,11 @@ class BLEService : Service() {
 					mConnectionState = STATE_CONNECTED
 
 					broadcastUpdate(intentAction)
-					if (hasPermissions(this@BLEService, Manifest.permission.BLUETOOTH_CONNECT)) {
+					if (hasPermissions(
+							(context ?: this) as Context,
+							Manifest.permission.BLUETOOTH_CONNECT
+						)
+					) {
 						startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 						return
 					}
@@ -96,8 +113,8 @@ class BLEService : Service() {
 			get() = this@BLEService
 	}
 
-	override fun onBind(intent: Intent?): IBinder = mBinder
-	override fun onUnbind(intent: Intent?): Boolean {
+	override fun onBind(intent: Intent): IBinder = mBinder
+	override fun onUnbind(intent: Intent): Boolean {
 		close()
 		return super.onUnbind(intent)
 	}
@@ -107,7 +124,7 @@ class BLEService : Service() {
 	fun initialize(): Boolean {
 		if (getSystemService(Context.BLUETOOTH_SERVICE) == null) {
 			Toast.makeText(
-				this,
+				context,
 				"Unable to initialize Bluetooth Manager.",
 				Toast.LENGTH_SHORT
 			).show()
@@ -120,7 +137,7 @@ class BLEService : Service() {
 
 		if (mBluetoothManager!!.adapter == null) {
 			Toast.makeText(
-				this,
+				context,
 				"Unable to obtain a BluetoothAdapter.",
 				Toast.LENGTH_SHORT
 			).show()
@@ -134,30 +151,23 @@ class BLEService : Service() {
 	}
 
 	@SuppressLint("MissingPermission")
-	fun connect(address: String?): Boolean {
-		if (address == null) {
-			Toast.makeText(
-				this,
-				"Unspecified address.",
-				Toast.LENGTH_SHORT
-			).show()
-
-			Log.e(TAG, "Unspecified address.")
-			return false
-		}
-
-		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) return false
+	fun connect(address: String): Boolean {
+		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) return false
 
 		if (mBluetoothDeviceAddress != null && address == mBluetoothDeviceAddress) {
 			Toast.makeText(
-				this,
+				context,
 				"Trying to connect...",
 				Toast.LENGTH_SHORT
 			).show()
 
 			Log.d(TAG, "Trying to connect before checking permissions...")
 
-			return if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
+			return if (hasPermissions(
+					(context ?: this),
+					Manifest.permission.BLUETOOTH_CONNECT
+				)
+			) {
 				startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 				false
 			} else if (mBluetoothGatt != null && mBluetoothGatt!!.connect() && mBluetoothGatt!!.discoverServices()) {
@@ -165,7 +175,8 @@ class BLEService : Service() {
 				Log.d(TAG, "Connecting to $address...")
 				true
 			} else {
-				Toast.makeText(this, "Unable to connect to GATT server.", Toast.LENGTH_LONG).show()
+				Toast.makeText(context, "Unable to connect to GATT server.", Toast.LENGTH_LONG)
+					.show()
 				Log.e(TAG, "Unable to connect to GATT server.")
 
 				false
@@ -175,7 +186,7 @@ class BLEService : Service() {
 		val device = mBluetoothAdapter!!.getRemoteDevice(address)
 		if (device == null) {
 			Toast.makeText(
-				this,
+				context,
 				"Device not found. Unable to connect.",
 				Toast.LENGTH_SHORT
 			).show()
@@ -184,9 +195,9 @@ class BLEService : Service() {
 			return false
 		}
 
-		mBluetoothGatt = device.connectGatt(this, true, mGattCallback)
+		mBluetoothGatt = device.connectGatt(context, true, mGattCallback)
 		Toast.makeText(
-			this,
+			context,
 			"Trying to connect...",
 			Toast.LENGTH_SHORT
 		).show()
@@ -202,7 +213,7 @@ class BLEService : Service() {
 	fun disconnect() {
 		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
-				this,
+				context,
 				"Bluetooth Adapter is not initialized",
 				Toast.LENGTH_SHORT
 			).show()
@@ -211,7 +222,7 @@ class BLEService : Service() {
 			return
 		}
 
-		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
@@ -221,7 +232,7 @@ class BLEService : Service() {
 
 	@SuppressLint("MissingPermission")
 	fun close() {
-		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
 			intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
 			startActivity(intent)
@@ -233,10 +244,10 @@ class BLEService : Service() {
 	}
 
 	@SuppressLint("MissingPermission")
-	fun readCharacteristic(characteristic: BluetoothGattCharacteristic?) {
+	fun readCharacteristic(characteristic: BluetoothGattCharacteristic) {
 		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
-				this,
+				context,
 				"Bluetooth Adapter is not initialized",
 				Toast.LENGTH_SHORT
 			).show()
@@ -245,7 +256,7 @@ class BLEService : Service() {
 			return
 		}
 
-		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
@@ -260,7 +271,7 @@ class BLEService : Service() {
 	) {
 		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
-				this,
+				context,
 				"Bluetooth Adapter is not initialized",
 				Toast.LENGTH_SHORT
 			).show()
@@ -269,7 +280,7 @@ class BLEService : Service() {
 			return
 		}
 
-		if (hasPermissions(this, Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}

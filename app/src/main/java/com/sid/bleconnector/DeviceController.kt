@@ -2,7 +2,12 @@ package com.sid.bleconnector
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -73,7 +78,7 @@ class DeviceController : AppCompatActivity() {
 		if (mBLEService != null) connectToDevice()
 	}
 
-	fun connectToDevice() = if (mBLEService!!.connect(mDeviceAddress)) {
+	fun connectToDevice() = if (mBLEService!!.connect(mDeviceAddress!!)) {
 		Log.d(TAG, "Connected")
 
 		mConnected = true
