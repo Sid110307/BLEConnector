@@ -1,18 +1,23 @@
 package com.sid.bleconnector
 
-import android.content.Intent
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowBluetoothDevice
+import kotlin.experimental.and
+import kotlin.random.Random
 
 /**
  * Instrumented test, which will execute on an Android device.
  *
  * See [testing documentation](http://d.android.com/tools/testing).
  */
-class InstrumentedTest {
+@RunWith(RobolectricTestRunner::class)
+class UnitTest {
 	@Test
-	fun useAppContext() = Assert.assertEquals(
+	fun checkAppContext() = Assert.assertEquals(
 		"com.sid.bleconnector",
 		InstrumentationRegistry.getInstrumentation().targetContext.packageName
 	)
@@ -20,9 +25,6 @@ class InstrumentedTest {
 	@Test
 	fun testBLE() {
 		BLEService(InstrumentationRegistry.getInstrumentation().targetContext).apply {
-			connect("00:F6:20:3F:40:9B")
-
-			val intent = Intent()
 			val data = byteArrayOf(
 				0x01,
 				0x02,
@@ -40,12 +42,18 @@ class InstrumentedTest {
 				0x0D,
 				0x0E,
 				0x0F
-			)
+			).toString()
 
-			intent.putExtra("data", data)
-			sendBroadcast(intent)
+			// TODO: Migrate to new ShadowBluetoothDevice function
+			connect(ShadowBluetoothDevice.newInstance(ByteArray(6).also {
+				Random.nextBytes(it)
+				it[0] = (it[0] and 254.toByte())
+			}.joinToString(":") { String.format("%02X", it) }).address)
+			println("Sending data: $data...")
 
+			broadcastUpdate(data)
 			disconnect()
+			println("Disconnected.")
 		}
 	}
 }

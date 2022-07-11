@@ -89,7 +89,7 @@ class BLEService() : Service() {
 		) = broadcastUpdate("ACTION_DATA_AVAILABLE", characteristic)
 	}
 
-	fun broadcastUpdate(action: String) = sendBroadcast(Intent(action))
+	fun broadcastUpdate(action: String) = (context ?: this).sendBroadcast(Intent(action))
 
 	fun broadcastUpdate(
 		@Suppress("SameParameterValue") action: String,
@@ -105,7 +105,7 @@ class BLEService() : Service() {
 			intent.putExtra("EXTRA_DATA", hexString.toString())
 		}
 
-		sendBroadcast(intent)
+		(context ?: this).sendBroadcast(intent)
 	}
 
 	inner class LocalBinder : Binder() {
@@ -211,7 +211,7 @@ class BLEService() : Service() {
 
 	@SuppressLint("MissingPermission")
 	fun disconnect() {
-		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
+		if (mBluetoothManager == null || mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
 				context,
 				"Bluetooth Adapter is not initialized",
