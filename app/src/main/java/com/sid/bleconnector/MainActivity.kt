@@ -20,7 +20,6 @@ import android.view.*
 import android.widget.BaseAdapter
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -29,6 +28,7 @@ import androidx.core.app.ActivityCompat.requestPermissions
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.sid.bleconnector.DeviceController.Companion.TAG
 
 class MainActivity : AppCompatActivity() {
@@ -69,10 +69,10 @@ class MainActivity : AppCompatActivity() {
 		)
 
 		if (!packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-			Toast.makeText(
-				this,
+			Snackbar.make(
+				findViewById(R.id.main_layout),
 				"BLE is not supported on this device",
-				Toast.LENGTH_SHORT
+				Snackbar.LENGTH_SHORT
 			).show()
 
 			Log.e(TAG, "BLE is not supported on this device")
@@ -80,10 +80,10 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		if (getSystemService(Context.BLUETOOTH_SERVICE) == null) {
-			Toast.makeText(
-				this,
+			Snackbar.make(
+				findViewById(R.id.main_layout),
 				"Bluetooth is not supported on this device",
-				Toast.LENGTH_SHORT
+				Snackbar.LENGTH_SHORT
 			).show()
 
 			Log.e(TAG, "Bluetooth is not supported on this device")

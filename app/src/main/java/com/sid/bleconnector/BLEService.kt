@@ -3,14 +3,7 @@ package com.sid.bleconnector
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Service
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothGattService
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
+import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
@@ -124,7 +117,7 @@ class BLEService() : Service() {
 	fun initialize(): Boolean {
 		if (getSystemService(Context.BLUETOOTH_SERVICE) == null) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Unable to initialize Bluetooth Manager.",
 				Toast.LENGTH_SHORT
 			).show()
@@ -137,7 +130,7 @@ class BLEService() : Service() {
 
 		if (mBluetoothManager!!.adapter == null) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Unable to obtain a BluetoothAdapter.",
 				Toast.LENGTH_SHORT
 			).show()
@@ -156,7 +149,7 @@ class BLEService() : Service() {
 
 		if (mBluetoothDeviceAddress != null && address == mBluetoothDeviceAddress) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Trying to connect...",
 				Toast.LENGTH_SHORT
 			).show()
@@ -175,7 +168,11 @@ class BLEService() : Service() {
 				Log.d(TAG, "Connecting to $address...")
 				true
 			} else {
-				Toast.makeText(context, "Unable to connect to GATT server.", Toast.LENGTH_LONG)
+				Toast.makeText(
+					(context ?: this),
+					"Unable to connect to GATT server.",
+					Toast.LENGTH_LONG
+				)
 					.show()
 				Log.e(TAG, "Unable to connect to GATT server.")
 
@@ -186,7 +183,7 @@ class BLEService() : Service() {
 		val device = mBluetoothAdapter!!.getRemoteDevice(address)
 		if (device == null) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Device not found. Unable to connect.",
 				Toast.LENGTH_SHORT
 			).show()
@@ -197,7 +194,7 @@ class BLEService() : Service() {
 
 		mBluetoothGatt = device.connectGatt(context, true, mGattCallback)
 		Toast.makeText(
-			context,
+			(context ?: this),
 			"Trying to connect...",
 			Toast.LENGTH_SHORT
 		).show()
@@ -213,7 +210,7 @@ class BLEService() : Service() {
 	fun disconnect() {
 		if (mBluetoothManager == null || mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Bluetooth Adapter is not initialized",
 				Toast.LENGTH_SHORT
 			).show()
@@ -247,7 +244,7 @@ class BLEService() : Service() {
 	fun readCharacteristic(characteristic: BluetoothGattCharacteristic) {
 		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Bluetooth Adapter is not initialized",
 				Toast.LENGTH_SHORT
 			).show()
@@ -271,7 +268,7 @@ class BLEService() : Service() {
 	) {
 		if (mBluetoothManager!!.adapter == null || !mBluetoothManager!!.adapter.isEnabled) {
 			Toast.makeText(
-				context,
+				(context ?: this),
 				"Bluetooth Adapter is not initialized",
 				Toast.LENGTH_SHORT
 			).show()

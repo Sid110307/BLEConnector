@@ -2,12 +2,7 @@ package com.sid.bleconnector
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.ServiceConnection
+import android.content.*
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -16,8 +11,8 @@ import android.view.MenuItem
 import android.widget.ExpandableListView
 import android.widget.SimpleExpandableListAdapter
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
 import java.util.*
 
 class DeviceController : AppCompatActivity() {
@@ -150,10 +145,10 @@ class DeviceController : AppCompatActivity() {
 			mBLEService = (service as BLEService.LocalBinder).service
 
 			if (!mBLEService!!.initialize()) {
-				Toast.makeText(
-					this@DeviceController,
+				Snackbar.make(
+					findViewById(android.R.id.content),
 					"Unable to initialize Bluetooth",
-					Toast.LENGTH_SHORT
+					Snackbar.LENGTH_SHORT
 				).show()
 
 				Log.e(TAG, "Unable to initialize Bluetooth")
@@ -275,6 +270,8 @@ class DeviceController : AppCompatActivity() {
 			}
 		}
 	}
+
+	override fun onBackPressed() = if (mConnected) disconnectFromDevice() else super.onBackPressed()
 
 	companion object {
 		const val EXTRAS_DEVICE_NAME = "DEVICE_NAME"
