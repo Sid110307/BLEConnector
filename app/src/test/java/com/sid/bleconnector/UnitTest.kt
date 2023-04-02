@@ -22,7 +22,9 @@ class UnitTest {
 
 	@Test
 	fun testBLE() {
-		BLEService(InstrumentationRegistry.getInstrumentation().targetContext).apply {
+		BLEService(InstrumentationRegistry.getInstrumentation().targetContext).also {
+			it.initialize()
+
 			val data = byteArrayOf(
 				0x01,
 				0x02,
@@ -47,11 +49,11 @@ class UnitTest {
 //				Random.nextBytes(it)
 //				it[0] = (it[0] and 254.toByte())
 //			}.joinToString(":") { String.format("%02X", it) }).address)
-			connect(ShadowBluetoothDevice.newInstance("27:62:86:20:15:50").address)
+			it.connect(ShadowBluetoothDevice.newInstance("27:62:86:20:15:50").address)
 			println("Sending data: $data...")
 
-			broadcastUpdate(data)
-			disconnect()
+			it.broadcastUpdate(data)
+			it.disconnect()
 			println("Disconnected.")
 		}
 	}

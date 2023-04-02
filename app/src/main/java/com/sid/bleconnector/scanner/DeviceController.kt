@@ -1,8 +1,13 @@
-package com.sid.bleconnector
+package com.sid.bleconnector.scanner
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -11,9 +16,13 @@ import android.view.MenuItem
 import android.widget.ExpandableListView
 import android.widget.SimpleExpandableListAdapter
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
-import java.util.*
+import com.sid.bleconnector.BLEService
+import com.sid.bleconnector.MainActivity.Companion.TAG
+import com.sid.bleconnector.R
+import java.util.UUID
 
 class DeviceController : AppCompatActivity() {
 	private var mConnectionState: TextView? = null
@@ -64,6 +73,13 @@ class DeviceController : AppCompatActivity() {
 
 		val gattServiceIntent = Intent(this, BLEService::class.java)
 		bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE)
+
+		onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+			override fun handleOnBackPressed() {
+				if (mConnected) disconnectFromDevice()
+				finish()
+			}
+		})
 	}
 
 	override fun onResume() {
@@ -131,6 +147,7 @@ class DeviceController : AppCompatActivity() {
 				connectToDevice()
 				return true
 			}
+
 			R.id.menu_disconnect -> {
 				disconnectFromDevice()
 				return true
@@ -172,12 +189,14 @@ class DeviceController : AppCompatActivity() {
 					updateConnectionState("Connected")
 					invalidateOptionsMenu()
 				}
+
 				"ACTION_GATT_DISCONNECTED" -> {
 					mConnected = false
 					updateConnectionState("Disconnected")
 					invalidateOptionsMenu()
 					clearUI()
 				}
+
 				"ACTION_GATT_SERVICES_DISCOVERED" -> displayGattServices(mBLEService!!.getSupportedGattServices())
 				"ACTION_DATA_AVAILABLE" -> {
 					displayData(intent.getStringExtra("EXTRA_DATA"))
@@ -209,7 +228,7 @@ class DeviceController : AppCompatActivity() {
 			val currentServiceData = HashMap<String, String?>()
 			uuid = gattService.uuid
 
-			currentServiceData["NAME"] = GattAttributes.lookup(uuid, "Unknown Service")
+			currentServiceData["NAME"] = "Bluetooth Service"
 			currentServiceData["UUID"] = uuid.toString()
 			gattServiceData.add(currentServiceData)
 
@@ -221,7 +240,7 @@ class DeviceController : AppCompatActivity() {
 				val currentCharaData = HashMap<String, String?>()
 				uuid = gattCharacteristic.uuid
 
-				currentCharaData["NAME"] = GattAttributes.lookup(uuid, "Unknown Characteristic")
+				currentCharaData["NAME"] = "Bluetooth Service"
 				currentCharaData["UUID"] = uuid.toString()
 
 				gattCharacteristicGroupData.add(currentCharaData)
@@ -256,27 +275,8 @@ class DeviceController : AppCompatActivity() {
 		return intentFilter
 	}
 
-	class GattAttributes {
-		companion object {
-			private val attributes = HashMap<UUID, String>()
-
-			init {
-				attributes[UUID.fromString(BLEService.BT_UUID.toString())] = "Bluetooth Service"
-			}
-
-			fun lookup(uuid: UUID, defaultName: String): String {
-				val name = attributes[uuid]
-				return name ?: defaultName
-			}
-		}
-	}
-
-	override fun onBackPressed() = if (mConnected) disconnectFromDevice() else super.onBackPressed()
-
 	companion object {
 		const val EXTRAS_DEVICE_NAME = "DEVICE_NAME"
 		const val EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS"
-
-		const val TAG = "DeviceController"
 	}
 }

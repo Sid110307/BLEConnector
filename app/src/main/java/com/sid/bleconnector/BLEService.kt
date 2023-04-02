@@ -10,14 +10,14 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
-import com.sid.bleconnector.DeviceController.Companion.TAG
-import com.sid.bleconnector.MainActivity.Companion.hasPermissions
+import com.sid.bleconnector.MainActivity.Companion.TAG
+import com.sid.bleconnector.MainActivity.Companion.notGrantedPermissions
 import java.util.*
 
 class BLEService() : Service() {
 	private var context: Context? = null
 
-	constructor(ctx: Context) : this() {
+	constructor(ctx: Context?) : this() {
 		context = ctx
 	}
 
@@ -39,7 +39,7 @@ class BLEService() : Service() {
 					mConnectionState = STATE_CONNECTED
 
 					broadcastUpdate(intentAction)
-					if (hasPermissions(
+					if (notGrantedPermissions(
 							(context ?: this) as Context,
 							Manifest.permission.BLUETOOTH_CONNECT
 						)
@@ -50,6 +50,7 @@ class BLEService() : Service() {
 
 					mBluetoothGatt!!.discoverServices()
 				}
+
 				BluetoothProfile.STATE_DISCONNECTED -> {
 					intentAction = "ACTION_GATT_DISCONNECTED"
 					mConnectionState = STATE_DISCONNECTED
@@ -101,6 +102,8 @@ class BLEService() : Service() {
 		(context ?: this).sendBroadcast(intent)
 	}
 
+	fun readBroadcastData(intent: Intent): String? = intent.getStringExtra("EXTRA_DATA")
+
 	inner class LocalBinder : Binder() {
 		val service: BLEService
 			get() = this@BLEService
@@ -115,7 +118,7 @@ class BLEService() : Service() {
 	private val mBinder: IBinder = LocalBinder()
 
 	fun initialize(): Boolean {
-		if (getSystemService(Context.BLUETOOTH_SERVICE) == null) {
+		if (context?.getSystemService(Context.BLUETOOTH_SERVICE) == null) {
 			Toast.makeText(
 				(context ?: this),
 				"Unable to initialize Bluetooth Manager.",
@@ -126,8 +129,7 @@ class BLEService() : Service() {
 			return false
 		}
 
-		mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-
+		mBluetoothManager = context?.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 		if (mBluetoothManager!!.adapter == null) {
 			Toast.makeText(
 				(context ?: this),
@@ -145,7 +147,11 @@ class BLEService() : Service() {
 
 	@SuppressLint("MissingPermission")
 	fun connect(address: String): Boolean {
-		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) return false
+		if (notGrantedPermissions(
+				(context ?: this),
+				Manifest.permission.BLUETOOTH_CONNECT
+			)
+		) return false
 
 		if (mBluetoothDeviceAddress != null && address == mBluetoothDeviceAddress) {
 			Toast.makeText(
@@ -156,7 +162,7 @@ class BLEService() : Service() {
 
 			Log.d(TAG, "Trying to connect before checking permissions...")
 
-			return if (hasPermissions(
+			return if (notGrantedPermissions(
 					(context ?: this),
 					Manifest.permission.BLUETOOTH_CONNECT
 				)
@@ -219,7 +225,7 @@ class BLEService() : Service() {
 			return
 		}
 
-		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (notGrantedPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
@@ -229,7 +235,7 @@ class BLEService() : Service() {
 
 	@SuppressLint("MissingPermission")
 	fun close() {
-		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (notGrantedPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
 			intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
 			startActivity(intent)
@@ -253,7 +259,7 @@ class BLEService() : Service() {
 			return
 		}
 
-		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (notGrantedPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}
@@ -277,7 +283,7 @@ class BLEService() : Service() {
 			return
 		}
 
-		if (hasPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
+		if (notGrantedPermissions((context ?: this), Manifest.permission.BLUETOOTH_CONNECT)) {
 			startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 			return
 		}

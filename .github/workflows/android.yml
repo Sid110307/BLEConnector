@@ -1,29 +1,23 @@
 name: Android Test CI
-on:
-    push:
-        branches:
-            - master
-    pull_request:
-        branches:
-            - master
+on: [ push, pull_request ]
 jobs:
-    unit_tests:
-        runs-on: ubuntu-latest
-        steps:
-            -   uses: actions/checkout@v3
-            -   name: Unit tests
-                run: ./gradlew test
-    android_tests:
-        runs-on: macos-latest
-        steps:
-            -   uses: actions/checkout@v3
-            -   name: Set up JDK
-                uses: actions/setup-java@v3
-                with:
-                    java-version: 11
-                    distribution: microsoft
-            -   name: Setup Android SDK
-                uses: android-actions/setup-android@v2
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Unit tests
+        run: ./gradlew test
+  android-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: 11
+          distribution: microsoft
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
             -   name: Instrumentation tests
                 uses: reactivecircus/android-emulator-runner@v2
                 with:

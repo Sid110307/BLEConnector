@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/scanner_mode"
+        android:icon="@drawable/ic_scanner_mode"
+        android:title="Scanner"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/manual_mode"
+        android:icon="@drawable/ic_manual_mode"
+        android:title="Manual"
+        app:showAsAction="never" />
+</menu>

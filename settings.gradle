@@ -13,4 +13,4 @@ dependencyResolutionManagement {
 	}
 }
 rootProject.name = "BLE Connector"
-include ':app'
+include ":app"
